@@ -1,0 +1,14 @@
+{
+  "name": "aws-lambda-api-dynamodb-cognito",
+  "version": "1.0.0",
+  "description": "",
+  "dependencies": {
+    "@aws-sdk/client-cognito-identity-provider": "^3.699.0",
+    "@aws-sdk/client-dynamodb": "^3.585.0",
+    "@aws-sdk/lib-dynamodb": "^3.585.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.1",
+    "@types/aws-lambda": "^8.10.146"
+  }
+}

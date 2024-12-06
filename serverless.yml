@@ -1,0 +1,87 @@
+# "org" ensures this Service is used with the correct Serverless Framework Access Key.
+org: luberlu
+# "app" enables Serverless Framework Dashboard features and sharing them with other Services.
+app: tests
+# "service" is the name of this project. This will also be added to your AWS resource names.
+service: aws-lambda-api-dynamodb-cognito
+
+stages:
+  default:
+    params:
+      itemsTableName: "items-table-${sls:stage}"
+
+provider:
+  name: aws
+  region: ${env:REGION}
+  runtime: nodejs20.x
+  httpApi:
+    authorizers:
+      itemsAuthorizer:
+        type: jwt
+        identitySource: $request.header.Authorization
+        issuerUrl: https://cognito-idp.${env:REGION}.amazonaws.com/${env:COGNITO_USER_POOL_ID}
+        audience:
+          - ${env:COGNITO_CLIENT_ID}
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource:
+            - Fn::GetAtt: [ItemsTable, Arn]
+  environment:
+    ITEMS_TABLE: ${param:itemsTableName}
+  logs:
+    httpApi: true
+
+functions:
+  generateToken:
+    handler: src/functions/auth.generateToken
+    events:
+      - httpApi:
+          method: post
+          path: /auth/token
+  refreshToken:
+    handler: src/functions/auth.refreshToken
+    events:
+      - httpApi:
+          path: /auth/refresh
+          method: post
+  getItems:
+    handler: src/functions/items.getItems
+    events:
+      - httpApi:
+          method: get
+          path: /items
+  createItem:
+    handler: src/functions/items.createItem
+    events:
+      - httpApi:
+          method: post
+          path: /items
+          authorizer:
+            name: itemsAuthorizer
+
+resources:
+  Resources:
+    ItemsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: itemId
+            AttributeType: S
+          - AttributeName: userId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: itemId
+            KeyType: HASH
+          - AttributeName: userId
+            KeyType: RANGE
+        BillingMode: PAY_PER_REQUEST
+        TableName: items-table-${sls:stage}
